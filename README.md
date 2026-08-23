@@ -46,6 +46,15 @@ verdade (`docker-compose up`) ainda falta preencher essas peças de infraestrutu
 Todos os arquivos `.py` deste repositório passam em `python3 -m py_compile` (sintaxe válida) e os dois
 `docker-compose.yml` são YAML válido.
 
+## Nota sobre `backend/requirements.txt`
+
+As versões originais do plano vinham travadas com `==` (ex: `numpy==1.26.2`), o que quebra em versões
+recentes do Python (ex: 3.14) porque não existe pacote pré-compilado para elas e o pip tenta compilar do
+zero — exigindo um compilador C instalado no Windows. Troquei para `>=` (sem trava exata) para o pip poder
+baixar versões mais novas com pacotes prontos. Também adicionei `pydantic-settings`, que faltava (é
+necessário para `backend/core/config.py`). Se você usa Python 3.11/3.12, os requirements originais também
+funcionariam sem problema.
+
 ## Como rodar (quando as peças faltantes estiverem prontas)
 
 ```bash
