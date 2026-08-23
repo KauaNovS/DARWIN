@@ -3,6 +3,7 @@ from typing import Dict, Any, List, Optional
 from neo4j import AsyncGraphDatabase
 from core.database import get_neo4j_driver
 import uuid
+import json  # NOTE: missing in the original plan (json.dumps/loads used below without it)
 
 class NodeManager:
     """Gerencia nós do grafo relacional"""
@@ -62,9 +63,9 @@ class NodeManager:
             return self._record_to_dict(record["n"]) if record else None
     
     async def search(self, query: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Busca nós por critérios"""
-        # TODO: Implementar busca flexível
-        pass
+        """Busca nós por critérios (busca flexível ainda não implementada — TODO do plano original)"""
+        # TODO: Implementar busca flexível (filtros por type/context/etc)
+        return []
     
     async def get_relations(self, node_id: str) -> List[Dict[str, Any]]:
         """Obtém todas as relações de um nó"""

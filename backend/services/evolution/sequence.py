@@ -45,8 +45,10 @@ class SequenceManager:
         })
         
         # Cria a Poção correspondente
-        await self._create_potion(sequence["id"], path, level)
-        
+        # NOTE: memory.store() retorna {"node": ..., "patterns": ...}, não um dict
+        # com "id" no topo — corrigido aqui (bug do plano original).
+        await self._create_potion(sequence["node"]["id"], path, level)
+
         return sequence
     
     async def _create_potion(self, sequence_id: str, path: str, level: int) -> Dict[str, Any]:

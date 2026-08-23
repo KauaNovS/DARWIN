@@ -41,6 +41,11 @@ class LiveMemory:
             "patterns": patterns
         }
     
+    async def search(self, query: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Busca memórias por critérios (chamado por services/evolution/sequence.py
+        mas nunca definido no plano original — delega para o node_manager)."""
+        return await self.node_manager.search(query)
+
     async def retrieve(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
         """Recupera memórias relevantes"""
         # Busca semântica (implementar com embeddings)

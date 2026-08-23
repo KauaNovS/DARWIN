@@ -1,4 +1,11 @@
 # models/sequence.py
+from datetime import datetime
+from sqlalchemy import Column, String, DateTime, Integer, Float, JSON, ForeignKey
+from sqlalchemy.dialects.postgresql import UUID
+from core.database import Base
+import uuid
+
+
 class Sequence(Base):
     __tablename__ = "sequences"
     

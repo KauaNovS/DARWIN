@@ -21,39 +21,37 @@ Este repositório organiza esse código na estrutura de pastas que o próprio pl
 
 ## Importante — status real do código
 
-Isto é o scaffold do **plano**, não um produto testado. Ao extrair fielmente o que estava no documento,
-mantive tudo como estava, incluindo:
+O `backend/` **já sobe de verdade**: `uvicorn main:app` inicia sem erro e todas as 8 rotas
+(`/api/auth`, `/api/users`, `/api/tasks`, `/api/agents`, `/api/memory`, `/api/graph`, `/api/evolution`,
+`/api/health`) respondem em `/docs`. Isso foi testado rodando o servidor de verdade, não só checado a
+sintaxe.
 
-- Vários `# TODO: Implementar ...` deixados no próprio plano (recomendação, notificações, ingredientes
-  de poções, análise de conteúdo dos agentes, etc.).
-- `AtlasAgent` e `OrionAgent` eram **importados** por `services/agents/factory.py` mas nunca definidos
-  no plano — adicionei stubs mínimos (`backend/services/agents/atlas.py` e `orion.py`) só para os imports
-  não quebrarem. A lógica real deles precisa ser escrita.
-- `core/config.py` e `core/database.py` (dentro de `backend/`) **não existiam no plano** — `main.py` e os
-  models fazem `from core.config import settings` / `from core.database import Base`, então adicionei o
-  mínimo de "cola" (Pydantic Settings + SQLAlchemy async engine) para o pacote ser importável. Ajuste como
-  quiser.
-- Não existe autenticação real (`get_current_user`, `core/security.py`), processamento de voz
-  (`services/voice/processor.py`), nem `services/graph/query.py` / `services/graph/propagation.py` —
-  esses módulos são referenciados em imports mas não estavam no plano. Vão precisar ser escritos antes do
-  backend rodar de ponta a ponta.
-- O `app/` (camada instintiva) depende de `get_redis()` e `get_neo4j_driver()` que também não têm
-  implementação no plano — só as chamadas.
+Para chegar até aí, além do que já estava no plano, foi necessário escrever peças que **não existiam
+no documento original** (main.py importava/chamava tudo isso, mas nunca foi escrito):
 
-Ou seja: você tem a **arquitetura e uma fatia significativa da lógica** já escrita, mas para rodar de
-verdade (`docker-compose up`) ainda falta preencher essas peças de infraestrutura/autenticação.
+- `backend/core/config.py`, `core/database.py`, `core/dependencies.py`, `core/security.py` — settings,
+  conexão com Postgres/Neo4j/Redis, autenticação JWT (login/registro reais com hash de senha).
+- As 7 rotas que faltavam: `api/routes/{auth,users,tasks,agents,memory,graph,evolution,health}.py`
+  (só `voice.py` existia no plano).
+- `services/voice/processor.py`, `services/graph/query.py`, `services/graph/propagation.py` — eram
+  importados por outros arquivos mas nunca definidos.
+- `services/agents/atlas.py` e `orion.py` — importados por `factory.py` mas nunca definidos (ainda são
+  stubs: só devolvem `"status": "not_implemented"`, a lógica real de cada agente falta escrever).
+- Também corrigi alguns bugs que já estavam no texto do plano e que quebrariam em runtime: `import json`
+  faltando em `node_manager.py`, `_record_to_dict` chamado mas nunca definido em `relation_manager.py`,
+  `LiveMemory.search()` chamado por `sequence.py` mas nunca definido, e um `sequence["id"]` que deveria
+  ser `sequence["node"]["id"]`.
 
-Todos os arquivos `.py` deste repositório passam em `python3 -m py_compile` (sintaxe válida) e os dois
-`docker-compose.yml` são YAML válido.
+O que **ainda é TODO** (igual já estava marcado no plano original, não mudei a lógica de negócio):
+recomendação, notificações, lógica real de ingredientes de poções, busca flexível de nós/relações
+(`NodeManager.search`/`RelationManager.search` retornam lista vazia), transcrição de voz de verdade
+(hoje é só um placeholder), e a lógica real dos agentes Atlas/Orion.
 
-## Nota sobre `backend/requirements.txt`
+O `app/` (camada instintiva "Darwin 2.0") continua **separado e não conectado** ao `backend/` — não tem
+`main.py` próprio nem está incluído nas rotas do FastAPI acima. É um módulo à parte para você decidir como
+integrar.
 
-As versões originais do plano vinham travadas com `==` (ex: `numpy==1.26.2`), o que quebra em versões
-recentes do Python (ex: 3.14) porque não existe pacote pré-compilado para elas e o pip tenta compilar do
-zero — exigindo um compilador C instalado no Windows. Troquei para `>=` (sem trava exata) para o pip poder
-baixar versões mais novas com pacotes prontos. Também adicionei `pydantic-settings`, que faltava (é
-necessário para `backend/core/config.py`). Se você usa Python 3.11/3.12, os requirements originais também
-funcionariam sem problema.
+Todos os arquivos `.py` passam em `python3 -m py_compile` e os dois `docker-compose.yml` são YAML válido.
 
 ## Como rodar (quando as peças faltantes estiverem prontas)
 

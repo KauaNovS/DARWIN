@@ -1,4 +1,10 @@
 # services/graph/relation_manager.py
+import json
+import uuid
+from typing import Any, Dict, List
+from core.database import get_neo4j_driver
+
+
 class RelationManager:
     """Gerencia relações do grafo relacional"""
     
@@ -54,7 +60,12 @@ class RelationManager:
             
             record = await result.single()
             return self._record_to_dict(record["r"])
-    
+
+    async def search(self, query: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Busca relações por critérios (não estava no plano original)"""
+        # TODO: Implementar busca flexível (filtros por relation_type/status/etc)
+        return []
+
     async def propagate(self, source_id: str, depth: int = 3) -> List[Dict[str, Any]]:
         """Propaga impacto a partir de um nó"""
         async with self.driver.session() as session:
@@ -69,3 +80,19 @@ class RelationManager:
             )
             records = await result.fetch()
             return [self._record_to_dict(record) for record in records]
+
+    def _record_to_dict(self, record) -> Dict[str, Any]:
+        """Converte registro Neo4j para dict (chamado acima mas nunca definido no plano original)"""
+        if not record:
+            return {}
+        return {
+            "id": record.get("id"),
+            "relation_type": record.get("relation_type"),
+            "direction": record.get("direction"),
+            "intensity": record.get("intensity"),
+            "confidence": record.get("confidence"),
+            "context": json.loads(record.get("context", "{}")),
+            "status": record.get("status"),
+            "created_at": record.get("created_at"),
+            "updated_at": record.get("updated_at"),
+        }

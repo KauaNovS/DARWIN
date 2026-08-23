@@ -1,4 +1,5 @@
 # services/agents/safira.py
+from typing import Any, Dict
 from services.agents.base_agent import BaseAgent
 
 class SafiraAgent(BaseAgent):

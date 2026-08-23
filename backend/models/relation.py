@@ -1,4 +1,5 @@
 # models/relation.py
+from datetime import datetime
 from sqlalchemy import Column, String, DateTime, JSON, Float, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from core.database import Base
@@ -17,6 +18,8 @@ class Relation(Base):
     confidence = Column(Float, default=0.5)  # 0-1
     context = Column(JSON, default={})
     status = Column(String, default="active")
-    metadata = Column(JSON, default={})
+    # NOTE: renamed from `metadata` (original plan) — that name is reserved by
+    # SQLAlchemy's Declarative API and breaks class creation.
+    extra_metadata = Column(JSON, default={})
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

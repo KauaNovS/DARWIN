@@ -1,17 +1,15 @@
-# Versoes flexibilizadas (>=, sem trava exata) para o pip conseguir baixar
-# pacotes pre-compilados (wheels) compativeis com versoes recentes do Python,
-# em vez de tentar compilar do zero (o que exige um compilador C instalado).
-# As versoes originais do plano (com ==) estao comentadas ao lado.
-
-fastapi>=0.104.1          # era ==0.104.1
-uvicorn[standard]>=0.24.0 # era ==0.24.0
-pydantic>=2.5.0           # era ==2.5.0
-pydantic-settings>=2.0.0  # nao estava no plano original - necessario para core/config.py (Settings)
-python-dotenv>=1.0.0      # era ==1.0.0
-neo4j>=5.14.0              # era ==5.14.0
-asyncpg>=0.29.0           # era ==0.29.0
-redis>=5.0.1               # era ==5.0.1
-numpy>=1.26.2               # era ==1.26.2
-python-jose[cryptography]>=3.3.0  # era ==3.3.0
-passlib[bcrypt]>=1.7.4    # era ==1.7.4
-python-multipart>=0.0.6   # era ==0.0.6
+fastapi>=0.104
+uvicorn[standard]>=0.24
+pydantic>=2.5
+pydantic-settings>=2.0
+email-validator>=2.0
+python-dotenv>=1.0
+sqlalchemy[asyncio]>=2.0
+neo4j>=5.14
+asyncpg>=0.29
+redis>=5.0
+numpy>=1.26
+python-jose[cryptography]>=3.3
+passlib[bcrypt]>=1.7
+python-multipart>=0.0.6
+openai>=1.0
