@@ -1,0 +1,79 @@
+# infrastructure/docker/docker-compose.yml
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: darwin
+      POSTGRES_PASSWORD: darwin_password
+      POSTGRES_DB: darwin
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - darwin_network
+
+  neo4j:
+    image: neo4j:5
+    environment:
+      NEO4J_AUTH: neo4j/darwin_password
+      NEO4J_PLUGINS: '["graph-data-science"]'
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4j_data:/data
+    networks:
+      - darwin_network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - darwin_network
+
+  backend:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile.backend
+    environment:
+      DATABASE_URL: postgresql://darwin:darwin_password@postgres/darwin
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USER: neo4j
+      NEO4J_PASSWORD: darwin_password
+      REDIS_URL: redis://redis:6379
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - neo4j
+      - redis
+    networks:
+      - darwin_network
+    volumes:
+      - ../../backend:/app
+
+  frontend:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile.frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - darwin_network
+    volumes:
+      - ../../frontend/web:/app
+
+volumes:
+  postgres_data:
+  neo4j_data:
+
+networks:
+  darwin_network:
+    driver: bridge
