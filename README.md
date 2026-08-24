@@ -61,6 +61,30 @@ cp .env.example .env   # preencha OPENAI_API_KEY etc.
 docker-compose up --build
 ```
 
+## Deploy grátis na nuvem (Render)
+
+Inclui um `render.yaml` (Blueprint) na raiz para automatizar a criação do backend + Postgres + Redis no
+Render. O Neo4j **não é hospedado pelo Render** — use o [Neo4j Aura Free](https://neo4j.com/cloud/aura-free/)
+(grátis) e cole a URI/usuário/senha na dashboard do Render depois.
+
+1. Crie a instância grátis no Neo4j Aura e guarde a URI, usuário e senha.
+2. No Render: **New > Blueprint**, conecte este repositório GitHub.
+3. O Render vai propor criar: o Web Service (`darwin-genesis-api`), o Postgres (`darwin-genesis-db`) e o
+   Key Value/Redis (`darwin-genesis-redis`) — confirme.
+4. Depois de criado, abra o Web Service > Environment e preencha `NEO4J_URI`, `NEO4J_USER`,
+   `NEO4J_PASSWORD` (do Aura) e `OPENAI_API_KEY` (se for usar IA).
+5. O serviço vai buildar e subir sozinho. A URL pública fica em algo como
+   `https://darwin-genesis-api.onrender.com/docs`.
+
+**Limitações do plano grátis do Render:** o Web Service "dorme" depois de 15 minutos sem tráfego (o
+primeiro acesso depois disso demora ~1 minuto pra acordar), e o Postgres grátis expira em 30 dias (precisa
+recriar ou migrar pro pago). Serve bem para testar e mostrar o projeto, não para uso contínuo 24/7.
+
+Se o Blueprint der erro de validação na dashboard, os mesmos serviços podem ser criados manualmente:
+Web Service (Root Directory `backend`, Build Command `pip install -r requirements.txt`, Start Command
+`uvicorn main:app --host 0.0.0.0 --port $PORT`), um Postgres grátis, e um Key Value grátis — depois só
+copiar as URLs geradas para as variáveis de ambiente do Web Service.
+
 ## Estrutura
 
 ```

@@ -1,0 +1,57 @@
+# render.yaml — Render Blueprint
+#
+# Isso deixa a criação dos serviços no Render (quase) um clique só, em vez de
+# configurar cada campo manualmente na dashboard. No site do Render:
+# New > Blueprint > conecte este repositório > Render lê este arquivo.
+#
+# NEO4J_URI / NEO4J_USER / NEO4J_PASSWORD ficam com sync: false de propósito —
+# o Neo4j não é hospedado pelo Render, então você precisa criar uma instância
+# separada (Neo4j Aura Free, grátis) e colar os dados aqui na dashboard do
+# Render depois que o Blueprint for criado.
+#
+# Não testei este arquivo direto na dashboard do Render (não tenho acesso a
+# uma conta lá) — se algum campo der erro na validação, os passos manuais
+# equivalentes estão documentados no README.
+
+databases:
+  - name: darwin-genesis-db
+    databaseName: darwin
+    plan: free
+
+services:
+  - type: web
+    name: darwin-genesis-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: darwin-genesis-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: darwin-genesis-redis
+          type: keyvalue
+          property: connectionString
+      - key: NEO4J_URI
+        sync: false
+      - key: NEO4J_USER
+        sync: false
+      - key: NEO4J_PASSWORD
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        value: '["*"]'
+
+  - type: keyvalue
+    name: darwin-genesis-redis
+    plan: free
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: qualquer origem (ajuste depois se quiser restringir)

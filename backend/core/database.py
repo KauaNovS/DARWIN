@@ -10,7 +10,20 @@ from neo4j import AsyncGraphDatabase
 import redis.asyncio as redis_asyncio
 from core.config import settings
 
-engine = create_async_engine(settings.DATABASE_URL, echo=False)
+
+def _normalize_database_url(url: str) -> str:
+    """Provedores de nuvem (Render, Railway, Heroku) entregam a URL do Postgres
+    como 'postgres://...' ou 'postgresql://...', mas o SQLAlchemy async engine
+    precisa do driver explícito 'postgresql+asyncpg://...'. Normaliza aqui para
+    não depender do usuário editar a variável de ambiente manualmente."""
+    if url.startswith("postgres://"):
+        return url.replace("postgres://", "postgresql+asyncpg://", 1)
+    if url.startswith("postgresql://") and "+asyncpg" not in url:
+        return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    return url
+
+
+engine = create_async_engine(_normalize_database_url(settings.DATABASE_URL), echo=False)
 AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 Base = declarative_base()
