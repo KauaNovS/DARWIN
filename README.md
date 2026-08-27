@@ -21,10 +21,36 @@ Este repositório organiza esse código na estrutura de pastas que o próprio pl
 
 ## Importante — status real do código
 
-O `backend/` **já sobe de verdade**: `uvicorn main:app` inicia sem erro e todas as 8 rotas
+O `backend/` **já sobe de verdade**: `uvicorn main:app` inicia sem erro e todas as 9 rotas
 (`/api/auth`, `/api/users`, `/api/tasks`, `/api/agents`, `/api/memory`, `/api/graph`, `/api/evolution`,
-`/api/health`) respondem em `/docs`. Isso foi testado rodando o servidor de verdade, não só checado a
-sintaxe.
+`/api/health`, `/api/instinct`) respondem em `/docs`. Isso foi testado rodando o servidor de verdade
+(via `TestClient`, checando o `openapi.json`), não só checando a sintaxe.
+
+### Camada instintiva ("Darwin 2.0") — agora integrada, não mais separada
+
+A versão anterior deste README descrevia `app/` como um scaffold separado e desconectado do `backend/`
+(sem `main.py` próprio, importando de um módulo `app.core.database` que nunca existiu). Esse scaffold
+tinha bugs reais que impediam qualquer execução:
+
+- Importava `app.core.database.get_redis()` / `get_neo4j_driver()` — módulo inexistente no repositório.
+- Importava `app.models.genome.Genome` / `app.models.stress.StressIndex` — módulos inexistentes.
+- `GeneticMemory.distill()` chamava `await result.fetch()` num `AsyncResult` do driver Neo4j — esse
+  método não existe na API assíncrona (`neo4j` >= 5); precisa iterar com `async for`.
+- `OnboardingSentinel.get_days_active()` contava uma chave por *resposta* como se fosse um dia — 1 dia
+  com 3 respostas virava "3 dias ativos", inflando artificialmente o avanço de fase.
+
+Esses módulos foram corrigidos e movidos para `backend/services/instinct/` (`wave_index.py`,
+`trust_boundary.py`, `eco_listener.py`, `halter_guardian.py`, `sentinel.py`, `genetic_memory.py`), agora
+reaproveitando `core.database` e `core.dependencies` já testados deste backend, em vez de duplicar uma
+stack de conexões separada. Um `ai_service.py` novo gera insights curtos (OpenAI se `OPENAI_API_KEY`
+estiver configurada, com fallback local baseado em regras caso contrário). Tudo isso é exposto em
+`backend/api/routes/instinct.py`, prefixo `/api/instinct`:
+
+- `GET /api/instinct/onboarding/questions` — perguntas diárias da fase atual
+- `POST /api/instinct/onboarding/answer` — registra resposta e tenta avançar de fase
+- `GET /api/instinct/onboarding/phase` — fase atual + dias ativos
+- `POST /api/instinct/process` — processa Eco + Halter + Wave Index + Genoma + Trust Boundary de uma vez
+- `POST /api/instinct/feedback` — feedback de aprovação/rejeição para ajustar o Trust Boundary
 
 Para chegar até aí, além do que já estava no plano, foi necessário escrever peças que **não existiam
 no documento original** (main.py importava/chamava tudo isso, mas nunca foi escrito):
@@ -46,10 +72,6 @@ O que **ainda é TODO** (igual já estava marcado no plano original, não mudei 
 recomendação, notificações, lógica real de ingredientes de poções, busca flexível de nós/relações
 (`NodeManager.search`/`RelationManager.search` retornam lista vazia), transcrição de voz de verdade
 (hoje é só um placeholder), e a lógica real dos agentes Atlas/Orion.
-
-O `app/` (camada instintiva "Darwin 2.0") continua **separado e não conectado** ao `backend/` — não tem
-`main.py` próprio nem está incluído nas rotas do FastAPI acima. É um módulo à parte para você decidir como
-integrar.
 
 Todos os arquivos `.py` passam em `python3 -m py_compile` e os dois `docker-compose.yml` são YAML válido.
 
@@ -89,8 +111,7 @@ copiar as URLs geradas para as variáveis de ambiente do Web Service.
 
 ```
 darwin-genesis/
-├── backend/          # Fases 1–3 do plano (API, modelos, serviços)
-├── app/              # "Darwin 2.0" — camada instintiva
+├── backend/          # API, modelos, serviços — inclui services/instinct/ (Darwin 2.0, já integrado)
 ├── frontend/
 │   ├── web/
 │   └── mobile/
