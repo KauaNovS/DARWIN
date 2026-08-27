@@ -1,35 +1,48 @@
-# api/routes/memory.py
-#
-# NOTE: Not in the original plan — needed because main.py imports it.
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
-from typing import Any, Dict, List, Optional
-
-from core.dependencies import get_current_user
-from models.user import User
-from services.memory.live_memory import LiveMemory
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from core.dependencies import get_current_user, get_db
+from models.beyonder import User, Ritual, Memory
+from datetime import date, timedelta
 
 router = APIRouter()
 
+@router.get("/summary")
+async def get_memory_summary(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    beyonder = current_user.beyonder
+    if not beyonder:
+        return {"message": "Perfil nao encontrado"}
 
-class StoreInput(BaseModel):
-    name: Optional[str] = None
-    type: Optional[str] = "memory"
-    context: Dict[str, Any] = {}
-    metadata: Dict[str, Any] = {}
-    related_memories: List[str] = []
+    # Ultimos 30 dias
+    since = (date.today() - timedelta(days=30)).isoformat()
+    result = await db.execute(
+        select(Ritual).where(
+            Ritual.beyonder_id == beyonder.id,
+            Ritual.date >= since
+        ).order_by(Ritual.date.asc())
+    )
+    rituals = result.scalars().all()
 
+    if not rituals:
+        return {"message": "Nenhum ritual nos ultimos 30 dias."}
 
-@router.post("/")
-async def store_memory(data: StoreInput, current_user: User = Depends(get_current_user)):
-    memory = LiveMemory(str(current_user.id))
-    return await memory.store(data.model_dump())
+    # Calcular medias
+    avg_sleep = sum(r.sleep_hours or 0 for r in rituals) / len(rituals)
+    avg_potion = sum(r.potion_score or 0 for r in rituals) / len(rituals)
+    avg_emotion = sum(r.emotional_state or 5 for r in rituals) / len(rituals)
+    journaling_rate = sum(1 for r in rituals if r.journaling) / len(rituals)
 
-
-@router.get("/search")
-async def search_memory(type: Optional[str] = None, current_user: User = Depends(get_current_user)):
-    memory = LiveMemory(str(current_user.id))
-    query: Dict[str, Any] = {}
-    if type:
-        query["type"] = type
-    return await memory.search(query)
+    return {
+        "period": "30 dias",
+        "rituals_count": len(rituals),
+        "avg_potion_score": round(avg_potion, 1),
+        "avg_sleep_hours": round(avg_sleep, 1),
+        "avg_emotional_state": round(avg_emotion, 1),
+        "journaling_rate": round(journaling_rate * 100, 1),
+        "current_digestion": beyonder.digestion_score,
+        "shadow_index": beyonder.shadow_index,
+        "total_xp": beyonder.total_xp,
+    }
