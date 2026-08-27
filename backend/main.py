@@ -1,16 +1,14 @@
-# main.py
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.routes import auth, users, tasks, agents, memory, graph, evolution, health, instinct
 from core.config import settings
+from api.routes import auth, users, sequences, potions, rituals, oracle, memory, health
 
 app = FastAPI(
-    title="Darwin Genesis API",
-    description="Sistema Operacional de Evolução Humana",
-    version="0.1.0"
+    title="Darwin API",
+    description="Sistema de Evolucao Humana -- Beyonders em ascensao",
+    version="2.0.0",
 )
 
-# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
@@ -19,17 +17,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Rotas
-app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
-app.include_router(users.router, prefix="/api/users", tags=["users"])
-app.include_router(tasks.router, prefix="/api/tasks", tags=["tasks"])
-app.include_router(agents.router, prefix="/api/agents", tags=["agents"])
-app.include_router(memory.router, prefix="/api/memory", tags=["memory"])
-app.include_router(graph.router, prefix="/api/graph", tags=["graph"])
-app.include_router(evolution.router, prefix="/api/evolution", tags=["evolution"])
-app.include_router(health.router, prefix="/api/health", tags=["health"])
-app.include_router(instinct.router, prefix="/api/instinct", tags=["instinct"])
+app.include_router(auth.router,      prefix="/api/auth",      tags=["auth"])
+app.include_router(users.router,     prefix="/api/users",     tags=["users"])
+app.include_router(sequences.router, prefix="/api/sequences", tags=["sequences"])
+app.include_router(potions.router,   prefix="/api/potions",   tags=["potions"])
+app.include_router(rituals.router,   prefix="/api/rituals",   tags=["rituals"])
+app.include_router(oracle.router,    prefix="/api/oracle",    tags=["oracle"])
+app.include_router(memory.router,    prefix="/api/memory",    tags=["memory"])
+app.include_router(health.router,    prefix="/api/health",    tags=["health"])
 
 @app.get("/")
 async def root():
-    return {"message": "Darwin Genesis API", "version": "0.1.0"}
+    return {
+        "system": "Darwin",
+        "version": "2.0.0",
+        "message": "O caminho se abre para quem ousa caminhar.",
+    }
