@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "Darwin",
+    "slug": "darwin",
+    "version": "2.0.0",
+    "orientation": "portrait",
+    "scheme": "darwin",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#080822",
+    "ios": { "supportsTablet": false },
+    "android": { "adaptiveIcon": { "backgroundColor": "#080822" } },
+    "plugins": ["expo-router"]
+  }
+}
