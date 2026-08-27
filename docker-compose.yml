@@ -1,66 +1,51 @@
-version: '3.8'
+version: '3.9'
 
 services:
-  neo4j:
-    image: neo4j:5-enterprise
+  postgres:
+    image: postgres:16-alpine
     environment:
-      NEO4J_AUTH: neo4j/darwin123
-      NEO4J_PLUGINS: '["graph-data-science"]'
-    ports:
-      - "7474:7474"
-      - "7687:7687"
-    volumes:
-      - neo4j_data:/data
-    networks:
-      - darwin_net
+      POSTGRES_DB: darwin
+      POSTGRES_USER: darwin
+      POSTGRES_PASSWORD: darwin
+    ports: ["5432:5432"]
+    volumes: [postgres_data:/var/lib/postgresql/data]
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    networks:
-      - darwin_net
+    ports: ["6379:6379"]
 
-  postgres:
-    image: postgres:15
+  neo4j:
+    image: neo4j:5-community
     environment:
-      POSTGRES_USER: darwin
-      POSTGRES_PASSWORD: darwin123
-      POSTGRES_DB: darwin
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - darwin_net
+      NEO4J_AUTH: neo4j/darwin
+      NEO4J_PLUGINS: '["apoc"]'
+    ports: ["7474:7474", "7687:7687"]
+    volumes: [neo4j_data:/data]
 
   backend:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
+    ports: ["8000:8000"]
     environment:
+      DATABASE_URL: postgresql+asyncpg://darwin:darwin@postgres/darwin
+      REDIS_URL: redis://redis:6379
       NEO4J_URI: bolt://neo4j:7687
       NEO4J_USER: neo4j
-      NEO4J_PASSWORD: darwin123
-      REDIS_URL: redis://redis:6379
-      DATABASE_URL: postgresql://darwin:darwin123@postgres/darwin
-      OPENAI_API_KEY: ${OPENAI_API_KEY} # Opcional para futuros agents
-    ports:
-      - "8000:8000"
-    depends_on:
-      - neo4j
-      - redis
-      - postgres
-    volumes:
-      - ./app:/app
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-    networks:
-      - darwin_net
+      NEO4J_PASSWORD: darwin
+      SECRET_KEY: mude-em-producao
+    depends_on: [postgres, redis, neo4j]
+    volumes: [./backend:/app]
+
+  web:
+    build:
+      context: ./frontend/web
+      dockerfile: Dockerfile
+    ports: ["3000:3000"]
+    environment:
+      NEXT_PUBLIC_API_URL: http://backend:8000
+    depends_on: [backend]
 
 volumes:
-  neo4j_data:
   postgres_data:
-
-networks:
-  darwin_net:
-    driver: bridge
+  neo4j_data:
