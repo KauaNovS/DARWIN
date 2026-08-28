@@ -1,0 +1,403 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── USUÁRIO ──────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  avatarUrl String?
+  role      UserRole @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Evolutivo
+  metaFinal     String?   // A meta final do usuário
+  identityNow   String?   // Quem o usuário é agora
+  identityGoal  String?   // Quem o usuário está se tornando
+  xpTotal       Int       @default(0)
+
+  // Relações
+  paths         UserPath[]
+  dailyLogs     DailyLog[]
+  missions      Mission[]
+  ingredients   IngredientLog[]
+  corruptions   CorruptionLog[]
+  graphNodes    GraphNode[]
+  graphEdges    GraphEdge[]
+  notifications Notification[]
+  insights      Insight[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+// ─── CAMINHOS ─────────────────────────────────────────────────────────────────
+
+model Path {
+  id          String  @id @default(cuid())
+  slug        String  @unique   // estrategista, executor, etc.
+  name        String
+  archetype   String  // "Observador → Arquiteto"
+  philosophy  String  // Texto da filosofia central
+  description String
+  color       String  // hex color
+  icon        String  // nome do ícone
+  isHidden    Boolean @default(false)
+
+  sequences   Sequence[]
+  userPaths   UserPath[]
+
+  @@map("paths")
+}
+
+model Sequence {
+  id          String @id @default(cuid())
+  pathId      String
+  number      Int    // 9 a 0
+  name        String // "Observador", "Analista", etc.
+  identity    String // Quem o usuário se torna
+  purpose     String
+  actionMethod String // Método de Atuação
+
+  path        Path     @relation(fields: [pathId], references: [id])
+  potion      Potion?
+  userPaths   UserPath[]
+
+  @@unique([pathId, number])
+  @@map("sequences")
+}
+
+model Potion {
+  id          String @id @default(cuid())
+  sequenceId  String @unique
+  name        String
+  purpose     String
+  actingMethod String
+
+  sequence    Sequence     @relation(fields: [sequenceId], references: [id])
+  ingredients Ingredient[]
+
+  @@map("potions")
+}
+
+model Ingredient {
+  id          String         @id @default(cuid())
+  potionId    String
+  name        String
+  type        IngredientType
+  description String
+  weight      Float          // 0.0 a 1.0 — peso para digestão
+  isRequired  Boolean        @default(true)
+  difficulty  Int            // 1-10
+
+  potion      Potion          @relation(fields: [potionId], references: [id])
+  logs        IngredientLog[]
+
+  @@map("ingredients")
+}
+
+enum IngredientType {
+  PRACTICE      // prática
+  REPETITION    // repetição
+  RECORD        // registro
+  APPLICATION   // aplicação
+  DIFFICULTY    // dificuldade
+  CORRECTION    // correção
+  DOMAIN        // domínio
+  INTEGRATION   // integração
+  EXPANSION     // expansão
+  INTELLECTUAL  // intelectual
+  PHYSICAL      // físico
+  EMOTIONAL     // emocional
+  SOCIAL        // social
+  FINANCIAL     // financeiro
+  ENVIRONMENTAL // ambiental
+}
+
+// ─── PROGRESSO DO USUÁRIO ─────────────────────────────────────────────────────
+
+model UserPath {
+  id             String     @id @default(cuid())
+  userId         String
+  pathId         String
+  sequenceId     String
+  sequenceNumber Int        @default(9)
+  isPrimary      Boolean    @default(false)
+  startedAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  // Digestão (0.0 a 1.0)
+  digestionLevel Float      @default(0.0)
+  // Corrupção (0.0 a 1.0)
+  corruptionLevel Float     @default(0.0)
+  // XP nesta sequência
+  xp             Int        @default(0)
+
+  // Estágios internos (1-10)
+  stageDiscovery     Int @default(0)  // Descoberta
+  stageUnderstanding Int @default(0)  // Compreensão
+  stageApplication   Int @default(0)  // Aplicação
+  stageConsistency   Int @default(0)  // Consistência
+  stageControl       Int @default(0)  // Controle
+  stageDomain        Int @default(0)  // Domínio
+  stageIntegration   Int @default(0)  // Integração
+  stageExpansion     Int @default(0)  // Expansão
+  stageArchitecture  Int @default(0)  // Arquitetura
+  stageAscension     Int @default(0)  // Ascensão Operacional
+
+  user     User     @relation(fields: [userId], references: [id])
+  path     Path     @relation(fields: [pathId], references: [id])
+  sequence Sequence @relation(fields: [sequenceId], references: [id])
+
+  @@unique([userId, pathId])
+  @@map("user_paths")
+}
+
+// ─── MISSÕES ──────────────────────────────────────────────────────────────────
+
+model Mission {
+  id          String        @id @default(cuid())
+  userId      String
+  pathSlug    String
+  sequenceNum Int
+  title       String
+  description String
+  type        MissionType
+  difficulty  Int           // 1-10
+  xpReward    Int
+  digestionWeight Float     // quanto contribui para digestão
+  status      MissionStatus @default(ACTIVE)
+  generatedByAI Boolean     @default(false)
+  aiContext   String?       // contexto que a IA usou para gerar
+
+  successCriteria String
+  failureCriteria String
+  durationDays    Int?
+
+  createdAt   DateTime @default(now())
+  completedAt DateTime?
+  failedAt    DateTime?
+  expiresAt   DateTime?
+
+  user        User @relation(fields: [userId], references: [id])
+  reflections MissionReflection[]
+
+  @@map("missions")
+}
+
+enum MissionType {
+  MAIN        // principal — obrigatória
+  SECONDARY   // secundária
+  HIDDEN      // oculta — desbloqueada por condição
+  CORRECTIVE  // corretiva — corrige falha/corrupção
+  DIGESTION   // de digestão — estabiliza Poção
+  DOMAIN      // de domínio — prova capacidade
+  EXPANSION   // de expansão — amplia capacidade
+  RUPTURE     // de ruptura — rompe limite
+  EMERGENCY   // emergência — corrupção crítica
+}
+
+enum MissionStatus {
+  ACTIVE
+  COMPLETED
+  FAILED
+  PAUSED
+  EXPIRED
+}
+
+model MissionReflection {
+  id         String   @id @default(cuid())
+  missionId  String
+  content    String
+  learnings  String?
+  createdAt  DateTime @default(now())
+
+  mission    Mission  @relation(fields: [missionId], references: [id])
+
+  @@map("mission_reflections")
+}
+
+// ─── REGISTROS DIÁRIOS ────────────────────────────────────────────────────────
+
+model DailyLog {
+  id        String   @id @default(cuid())
+  userId    String
+  date      DateTime @db.Date
+  createdAt DateTime @default(now())
+
+  // Físico
+  sleepHours   Float?
+  sleepQuality Int?   // 1-10
+  energyLevel  Int?   // 1-10
+  physicalActivity Boolean @default(false)
+
+  // Mental/Emocional
+  emotionalState  Int?    // 1-10 (1=colapso, 10=excelente)
+  clarityLevel    Int?    // 1-10
+  focusLevel      Int?    // 1-10
+  anxietyLevel    Int?    // 1-10
+
+  // Operacional
+  productivityLevel Int?  // 1-10
+  missionsDone    Int     @default(0)
+  ingredientsDone Int     @default(0)
+
+  // Texto livre
+  morningIntention String?
+  eveningReflection String?
+  todayLearning    String?
+  corruptionSigns  String? // sinais de corrupção detectados
+
+  // Financeiro
+  financialNote    String?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, date])
+  @@map("daily_logs")
+}
+
+// ─── INGREDIENTES (LOG) ───────────────────────────────────────────────────────
+
+model IngredientLog {
+  id           String   @id @default(cuid())
+  userId       String
+  ingredientId String
+  evidence     String   // o que o usuário fez
+  quality      Int      // 1-10 — qualidade da prática
+  createdAt    DateTime @default(now())
+
+  user       User       @relation(fields: [userId], references: [id])
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id])
+
+  @@map("ingredient_logs")
+}
+
+// ─── CORRUPÇÃO ────────────────────────────────────────────────────────────────
+
+model CorruptionLog {
+  id          String          @id @default(cuid())
+  userId      String
+  pathSlug    String
+  type        CorruptionType
+  level       CorruptionLevel
+  description String
+  signs       String[]
+  createdAt   DateTime        @default(now())
+  resolvedAt  DateTime?
+  resolution  String?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("corruption_logs")
+}
+
+enum CorruptionType {
+  EMOTIONAL     // emocional
+  COGNITIVE     // cognitiva
+  OPERATIONAL   // operacional
+  IDENTITY      // de identidade
+  SOCIAL        // social
+  STRATEGIC     // estratégica
+  AMBITION      // de ambição
+  CONTROL       // de controle
+  AUTOMATION    // de automação
+}
+
+enum CorruptionLevel {
+  LIGHT     // leve
+  MODERATE  // moderada
+  HIGH      // alta
+  CRITICAL  // crítica
+}
+
+// ─── GRAFO RELACIONAL ─────────────────────────────────────────────────────────
+
+model GraphNode {
+  id       String   @id @default(cuid())
+  userId   String
+  type     String   // sleep, emotion, energy, task, habit, etc.
+  label    String
+  value    String?
+  metadata Json?
+  createdAt DateTime @default(now())
+
+  user      User        @relation(fields: [userId], references: [id])
+  fromEdges GraphEdge[] @relation("EdgeFrom")
+  toEdges   GraphEdge[] @relation("EdgeTo")
+
+  @@map("graph_nodes")
+}
+
+model GraphEdge {
+  id         String   @id @default(cuid())
+  userId     String
+  fromNodeId String
+  toNodeId   String
+  type       String   // causal, bidirectional, temporal, etc.
+  intensity  Float    // 0.0 a 1.0
+  createdAt  DateTime @default(now())
+
+  user     User      @relation(fields: [userId], references: [id])
+  fromNode GraphNode @relation("EdgeFrom", fields: [fromNodeId], references: [id])
+  toNode   GraphNode @relation("EdgeTo",   fields: [toNodeId],   references: [id])
+
+  @@map("graph_edges")
+}
+
+// ─── INSIGHTS DA IA ───────────────────────────────────────────────────────────
+
+model Insight {
+  id        String      @id @default(cuid())
+  userId    String
+  type      InsightType
+  title     String
+  content   String
+  isRead    Boolean     @default(false)
+  createdAt DateTime    @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("insights")
+}
+
+enum InsightType {
+  DIGESTION_PROGRESS  // progresso na digestão
+  CORRUPTION_DETECTED // corrupção detectada
+  PATTERN_FOUND       // padrão encontrado
+  MISSION_SUGGESTED   // missão sugerida
+  SEQUENCE_READY      // pronto para avançar sequência
+  ENERGY_LOW          // energia baixa
+  BURNOUT_RISK        // risco de burnout
+  MILESTONE           // marco evolutivo
+}
+
+// ─── NOTIFICAÇÕES ─────────────────────────────────────────────────────────────
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  body      String
+  type      String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}
